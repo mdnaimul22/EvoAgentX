@@ -8,12 +8,15 @@ from evoagentx.core.module_utils import extract_code_blocks as util_extract_code
 from evoagentx.core.registry import register_parse_function
 from evoagentx.tools.file_tool import FileToolkit 
 from evoagentx.tools.mcp import MCPToolkit
+from utils.config import client_rotator
 
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-model_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
-# model_config = LiteLLMConfig(model="anthropic/claude-3-7-sonnet-20250219", anthropic_key=ANTHROPIC_API_KEY, stream=True, output_response=True, max_tokens=20000)
+client_config = client_rotator.get_next_client_config()
+model_config = OpenAILLMConfig(
+    model=client_config.model,
+    openai_key=client_config.api_key,
+    base_url=client_config.base_url,
+    proxy=client_config.proxy
+)
 
 
 @register_parse_function

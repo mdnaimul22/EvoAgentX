@@ -3,22 +3,27 @@ from evoagentx.benchmark import HotPotQA
 from evoagentx.workflow import QAActionGraph 
 from evoagentx.evaluators import Evaluator 
 from evoagentx.core.callbacks import suppress_logger_info
+from utils.config import client_rotator
 
 import os 
 from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 
 def main(): 
 
-    llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
-    llm = OpenAILLM(config=llm_config)
+    client_config = client_rotator.get_next_client_config()
+    openai_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy
+    )
+
+    llm = OpenAILLM(config=openai_config)
 
     benchmark = HotPotQA(mode="dev")
 
     workflow = QAActionGraph(
-        llm_config=llm_config,
+        llm_config=openai_config,
         description="This workflow aims to address multi-hop QA tasks."
     )
 

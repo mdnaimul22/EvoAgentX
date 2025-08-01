@@ -19,6 +19,8 @@ class OpenAILLMConfig(LLMConfig):
 
     llm_type: str = "OpenAILLM"
     openai_key: Optional[str] = Field(default=None, description="the API key used to authenticate OpenAI requests")
+    base_url: Optional[str] = Field(default=None, description="the base URL for the OpenAI API")
+    proxy: Optional[str] = Field(default=None, description="the proxy to use for the OpenAI API")
 
     # generation parameters
     temperature: Optional[float] = Field(default=None, description="the temperature used to scaling logits")

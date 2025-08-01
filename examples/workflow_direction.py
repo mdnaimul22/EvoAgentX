@@ -11,8 +11,9 @@ from evoagentx.workflow import WorkFlowGraph, WorkFlow
 from evoagentx.agents import AgentManager
 from evoagentx.tools.mcp import MCPToolkit
 from evoagentx.tools.file_tool import FileToolkit
+from utils.config import client_rotator
+
 load_dotenv() # Loads environment variables from .env file
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 output_file = "debug/output/direction/output.md"
 mcp_config_path = "examples/output/direction/mcp_direction.config"
@@ -21,7 +22,16 @@ module_save_path = "examples/output/direction/direction_demo_4o_mini.json"
 
 def main(goal=None):
     # LLM configuration
-    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True, max_tokens=16000)
+    client_config = client_rotator.get_next_client_config()
+    openai_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy,
+        stream=True, 
+        output_response=True, 
+        max_tokens=16000
+    )
     # Initialize the language model
     llm = OpenAILLM(config=openai_config)
     

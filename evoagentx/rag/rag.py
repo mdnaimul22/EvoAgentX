@@ -53,10 +53,12 @@ class RAGEngine:
         )
 
         # Dynamic Check the dimensions in StorageHandler
+        if self.embed_model.dimensions is not None:
+            self.storage_handler.storageConfig.vectorConfig.dimensions = self.embed_model.dimensions
+        
         if (self.storage_handler.vector_store is not None) and (self.embed_model.dimensions is not None):
             if self.storage_handler.storageConfig.vectorConfig.dimensions != self.embed_model.dimensions:
                 logger.warning("The dimensions in vector_store is not equal with embed_model. Reiniliaze vector_store.")
-                self.storage_handler.storageConfig.vectorConfig.dimensions = self.embed_model.dimensions
                 self.storage_handler._init_vector_store()
 
         # Initialize chunker

@@ -32,9 +32,9 @@ class GraphStoreConfig(BaseConfig):
     Configuration for graph databases, supporting Neo4j.
     """
     graph_name: str = Field(default="neo4j", description="Name of the graph database provider (e.g., 'neo4j')")
-    uri: Optional[str] = Field(default=None, description="URI for Neo4j database (e.g., 'bolt://localhost:7687')")
-    username: Optional[str] = Field(default=None, description="Username for Neo4j authentication")
-    password: Optional[str] = Field(default=None, description="Password for Neo4j authentication")
+    uri: Optional[str] = Field(default="bolt://localhost:7687", description="URI for Neo4j database (e.g., 'bolt://localhost:7687')")
+    username: Optional[str] = Field(default="neo4j", description="Username for Neo4j authentication")
+    password: Optional[str] = Field(default="password", description="Password for Neo4j authentication")
     database: Optional[str] = Field(default="neo4j", description="Name of the Neo4j database")
     max_retries: Optional[int] = Field(default=3, description="Maximum number of connection retries")
     timeout: Optional[float] = Field(default=30.0, description="Connection timeout in seconds")

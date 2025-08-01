@@ -5,8 +5,9 @@ from .mbpp import MBPP, AFlowMBPP
 from .math_benchmark import MATH
 from .humaneval import HumanEval, AFlowHumanEval
 from .livecodebench import LiveCodeBench
-
+from .benchmark import *
 __all__ = [
+    "Benchmark",
     "NQ", 
     "HotPotQA", 
     "MBPP", 

@@ -10,6 +10,15 @@ class HITLDecision(str, Enum):
     CONTINUE = "continue"
 
 class HITLInteractionType(str, Enum):
+    GENERAL_INQUIRY = "General_Inquiry"
+    APPROVAL_REQUEST = "Approval_Request"
+    FEEDBACK_REQUEST = "Feedback_Request"
+    LEARNING_VALIDATION = "Learinig_Validation"
+    INFORMATION_GATHERING = "Information_Gathering"
+    CREATIVE_COLLABORATION = "Creative_Collaboration"
+    ANALYSIS_REVIEW = "Analysis_Review"
+    DECISION_SUPPORT = "Decision_Support"
+    QUALITY_CHECK = "Quality_Check"
     APPROVE_REJECT = "approve_reject"
     COLLECT_USER_INPUT = "collect_user_input"
     REVIEW_EDIT_STATE = "review_edit_state"

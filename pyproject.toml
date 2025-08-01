@@ -61,7 +61,7 @@ dependencies = [
     "wikipedia",
     "mcp",
     "beautifulsoup4",
-    "neo4j",
+    "neo4j>=5.0.0",
     "ollama",
     "llama-index",
     "llama-index-vector-stores-faiss",

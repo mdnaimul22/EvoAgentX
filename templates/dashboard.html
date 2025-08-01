@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecosystem Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .metric-card { transition: all 0.3s ease; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .agent-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .evolution-card { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .knowledge-card { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .health-card { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🤖 Ecosystem Dashboard</h1>
+            <p class="text-gray-600">Real-time monitoring of autonomous agent ecosystem</p>
+            <div class="mt-4 flex items-center space-x-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                    System Online
+                </span>
+                <span class="text-sm text-gray-500">Uptime: <span id="uptime">{{ uptime }}</span></span>
+            </div>
+        </header>
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="metric-card agent-card rounded-lg p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 text-sm">Active Agents</p>
+                        <p class="text-3xl font-bold" id="agent-count">{{ agent_count }}</p>
+                    </div>
+                    <div class="text-4xl opacity-80">🤖</div>
+                </div>
+            </div>
+            
+            <div class="metric-card evolution-card rounded-lg p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 text-sm">Intelligence Score</p>
+                        <p class="text-3xl font-bold" id="intelligence-score">{{ intelligence_score }}</p>
+                    </div>
+                    <div class="text-4xl opacity-80">🧠</div>
+                </div>
+            </div>
+            
+            <div class="metric-card knowledge-card rounded-lg p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 text-sm">Knowledge Domains</p>
+                        <p class="text-3xl font-bold" id="knowledge-domains">{{ knowledge_domains }}</p>
+                    </div>
+                    <div class="text-4xl opacity-80">📚</div>
+                </div>
+            </div>
+            
+            <div class="metric-card health-card rounded-lg p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 text-sm">System Health</p>
+                        <p class="text-3xl font-bold" id="system-health">{{ system_health }}</p>
+                    </div>
+                    <div class="text-4xl opacity-80">💚</div>
+                </div>
+            </div>
+        </div>
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4">Intelligence Evolution</h3>
+                <canvas id="intelligence-chart" width="400" height="200"></canvas>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4">Agent Distribution</h3>
+                <canvas id="agent-distribution-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+        <!-- Agent List -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">Active Agents</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-4 py-2 text-left">Name</th>
+                            <th class="px-4 py-2 text-left">Role</th>
+                            <th class="px-4 py-2 text-left">Intelligence</th>
+                            <th class="px-4 py-2 text-left">Energy</th>
+                            <th class="px-4 py-2 text-left">Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agents-table">
+                        <!-- Agent rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- System Logs -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold mb-4">System Logs</h3>
+            <div class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto" id="logs-container">
+                <!-- Logs will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    <script>
+        // WebSocket connection for real-time updates
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateDashboard(data);
+        };
+        
+        ws.onopen = function() {
+            console.log('WebSocket connected');
+        };
+        
+        ws.onclose = function() {
+            console.log('WebSocket disconnected');
+            setTimeout(() => location.reload(), 5000); // Reload after 5 seconds
+        };
+        
+        // Initialize charts
+        const intelligenceCtx = document.getElementById('intelligence-chart').getContext('2d');
+        const intelligenceChart = new Chart(intelligenceCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Intelligence Score',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1
+                    }
+                }
+            }
+        });
+        
+        const distributionCtx = document.getElementById('agent-distribution-chart').getContext('2d');
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+        
+        function updateDashboard(data) {
+            // Update metrics
+            document.getElementById('agent-count').textContent = data.agent_count;
+            document.getElementById('intelligence-score').textContent = data.intelligence_score.toFixed(3);
+            document.getElementById('knowledge-domains').textContent = data.knowledge_domains;
+            document.getElementById('system-health').textContent = data.system_health.toFixed(3);
+            document.getElementById('uptime').textContent = data.uptime;
+            
+            // Update intelligence chart
+            if (data.intelligence_history) {
+                intelligenceChart.data.labels = data.intelligence_history.labels;
+                intelligenceChart.data.datasets[0].data = data.intelligence_history.data;
+                intelligenceChart.update();
+            }
+            
+            // Update distribution chart
+            if (data.agent_distribution) {
+                distributionChart.data.labels = data.agent_distribution.labels;
+                distributionChart.data.datasets[0].data = data.agent_distribution.data;
+                distributionChart.update();
+            }
+            
+            // Update agents table
+            if (data.agents) {
+                updateAgentsTable(data.agents);
+            }
+            
+            // Update logs
+            if (data.logs) {
+                updateLogs(data.logs);
+            }
+        }
+        
+        function updateAgentsTable(agents) {
+            const tbody = document.getElementById('agents-table');
+            tbody.innerHTML = '';
+            
+            agents.forEach(agent => {
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-2 font-medium">${agent.name}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            ${agent.role}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2">${agent.intelligence.toFixed(3)}</td>
+                    <td class="px-4 py-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: ${agent.energy * 100}%"></div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500">${agent.last_active}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function updateLogs(logs) {
+            const container = document.getElementById('logs-container');
+            container.innerHTML = '';
+            
+            logs.forEach(log => {
+                const logLine = document.createElement('div');
+                logLine.className = 'mb-1';
+                logLine.innerHTML = `<span class="text-gray-500">[${log.timestamp}]</span> <span class="text-yellow-400">${log.level}</span> ${log.message}`;
+                container.appendChild(logLine);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Request initial data
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => updateDashboard(data))
+            .catch(error => console.error('Error fetching initial data:', error));
+    </script>
+</body>
+</html>
+        

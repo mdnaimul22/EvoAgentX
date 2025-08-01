@@ -9,9 +9,9 @@ from evoagentx.evaluators import Evaluator
 from evoagentx.core.logging import logger
 from evoagentx.prompts import MiproPromptTemplate 
 from evoagentx.optimizers.mipro_optimizer import WorkFlowMiproOptimizer 
+from utils.config import client_rotator
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class MathSplits(MATH):
 
@@ -58,15 +58,34 @@ math_graph_data = {
 
 def main():
 
-    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
-    executor_llm = OpenAILLM(config=openai_config)
-    optimizer_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY, stream=True, output_response=False)
-    optimizer_llm = OpenAILLM(config=optimizer_config)
+    # Executor LLM
+    executor_client_config = client_rotator.get_next_client_config()
+    executor_llm_config = OpenAILLMConfig(
+        model=executor_client_config.model,
+        openai_key=executor_client_config.api_key,
+        base_url=executor_client_config.base_url,
+        proxy=executor_client_config.proxy,
+        stream=True, 
+        output_response=False
+    )
+    executor_llm = OpenAILLM(config=executor_llm_config)
+
+    # Optimizer LLM
+    optimizer_client_config = client_rotator.get_next_client_config()
+    optimizer_llm_config = OpenAILLMConfig(
+        model=optimizer_client_config.model,
+        openai_key=optimizer_client_config.api_key,
+        base_url=optimizer_client_config.base_url,
+        proxy=optimizer_client_config.proxy,
+        stream=True, 
+        output_response=False
+    )
+    optimizer_llm = OpenAILLM(config=optimizer_llm_config)
     
     benchmark = MathSplits()
     workflow_graph: SequentialWorkFlowGraph = SequentialWorkFlowGraph.from_dict(math_graph_data)
     agent_manager = AgentManager()
-    agent_manager.add_agents_from_workflow(workflow_graph, llm_config=openai_config)
+    agent_manager.add_agents_from_workflow(workflow_graph, llm_config=executor_llm_config)
 
     # define the evaluator 
     evaluator = Evaluator(

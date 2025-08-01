@@ -4,7 +4,7 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
-from openai import OpenAI, Stream
+from openai import OpenAI, Stream, DefaultHttpxClient
 from openai.types.chat import ChatCompletion
 from typing import Optional, List
 from litellm import token_counter, cost_per_token
@@ -19,17 +19,40 @@ class OpenAILLM(BaseLLM):
 
     def init_model(self):
         config: OpenAILLMConfig = self.config
-        self._client = self._init_client(config) # OpenAI(api_key=config.openai_key)
+
+        if not config.openai_key:
+            try:
+                from evoagentx.utils.config import client_rotator
+                client_config = client_rotator.get_next_client_config()
+                config.openai_key = client_config.api_key
+                config.base_url = client_config.base_url
+                config.proxy = client_config.proxy
+                # If the model is not specified in the config, use the one from the client rotator
+                if config.model is None or config.model == "default":
+                    config.model = client_config.model
+            except (ImportError, ValueError) as e:
+                # This is not a fatal error, the user may provide the key via other means
+                pass
+
+        self._client = self._init_client(config)
         self._default_ignore_fields = [
-            "llm_type", "output_response", "openai_key", "deepseek_key", "anthropic_key", 
-            "gemini_key", "meta_llama_key", "openrouter_key", "openrouter_base", "perplexity_key", 
+            "llm_type", "output_response", "openai_key", "base_url", "proxy", "deepseek_key", "anthropic_key",
+            "gemini_key", "meta_llama_key", "openrouter_key", "openrouter_base", "perplexity_key",
             "groq_key"
-        ] # parameters in OpenAILLMConfig that are not OpenAI models' input parameters 
+        ]  # parameters in OpenAILLMConfig that are not OpenAI models' input parameters
         if self.config.model not in get_openai_model_cost():
-            raise KeyError(f"'{self.config.model}' is not a valid OpenAI model name!")
+            # We can't raise an error here because custom models won't be in the cost list.
+            # We can log a warning instead.
+            pass
+            # raise KeyError(f"'{self.config.model}' is not a valid OpenAI model name!")
     
     def _init_client(self, config: OpenAILLMConfig):
-        client = OpenAI(api_key=config.openai_key)
+        http_client = DefaultHttpxClient(proxy=config.proxy) if config.proxy else None
+        client = OpenAI(
+            api_key=config.openai_key,
+            base_url=config.base_url,
+            http_client=http_client
+        )
         return client
 
     def formulate_messages(self, prompts: List[str], system_messages: Optional[List[str]] = None) -> List[List[dict]]:

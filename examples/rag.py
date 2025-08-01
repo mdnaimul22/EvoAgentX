@@ -12,6 +12,7 @@ from evoagentx.storages.storages_config import VectorStoreConfig, DBConfig, Grap
 from evoagentx.rag.rag_config import RAGConfig, ReaderConfig, ChunkerConfig, IndexConfig, EmbeddingConfig, RetrievalConfig
 from evoagentx.rag.schema import Query, Corpus, Chunk, ChunkMetadata
 from evoagentx.benchmark.hotpotqa import HotPotQA, download_raw_hotpotqa_data
+from utils.config import client_rotator
 
 # Load environment
 load_dotenv()
@@ -47,10 +48,12 @@ storage_handler = StorageHandler(storageConfig=store_config)
 # Define 3 embeddings models
 """
 # For openai example
+client_config_for_embedding = client_rotator.get_next_client_config()
 embedding=EmbeddingConfig(
         provider="openai",
         model_name="text-embedding-ada-002",
-        api_key=os.environ["OPENAI_API_KEY"],
+        api_key=client_config_for_embedding.api_key,
+        base_url=client_config_for_embedding.base_url,
     )
 # For huggingface example
 embedding=EmbeddingConfig(
@@ -113,11 +116,14 @@ llm = OpenRouterLLM(config=config)
 
 # from evoagentx.models import OpenAILLMConfig, OpenAILLM
 
+# client_config_for_llm = client_rotator.get_next_client_config()
 # config = OpenAILLMConfig(
-#     model="gpt-4o-mini",
+#     model=client_config_for_llm.model,
 #     temperature=0.7,
 #     max_tokens=1000,
-#     openai_key=os.environ["OPENAI_API_KEY"],
+#     openai_key=client_config_for_llm.api_key,
+#     base_url=client_config_for_llm.base_url,
+#     proxy=client_config_for_llm.proxy
 # )
 
 # llm = OpenAILLM(config=config)

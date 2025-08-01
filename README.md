@@ -152,32 +152,82 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 <!-- > 🔐 Tip: Don't forget to add `.env` to your `.gitignore` to avoid committing secrets. -->
 
 ### Configure and Use the LLM
-Once the API key is set, initialise the LLM with:
+Once the API key is set, you can initialize and use the LLM. For more advanced configurations, you can use `client_rotator` to manage multiple LLM providers.
 
 ```python
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
+from utils.config import client_rotator # Optional: for multi-LLM management
 
-# Load the API key from environment
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Option 1: Basic initialization
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# openai_config = OpenAILLMConfig(
+#     model="gpt-4o-mini",
+#     openai_key=OPENAI_API_KEY
+# )
 
-# Define LLM configuration
+# Option 2: Advanced configuration using client_rotator
+client_config = client_rotator.get_next_client_config()
 openai_config = OpenAILLMConfig(
-    model="gpt-4o-mini",       # Specify the model name
-    openai_key=OPENAI_API_KEY, # Pass the key directly
-    stream=True,               # Enable streaming response
-    output_response=True       # Print response to stdout
+    model=client_config.model,
+    openai_key=client_config.api_key,
+    base_url=client_config.base_url,
+    proxy=client_config.proxy,
+    temperature=0.7,
+    max_tokens=1000,
+    stream=True,
+    output_response=True
 )
 
 # Initialize the language model
 llm = OpenAILLM(config=openai_config)
 
-# Generate a response from the LLM
+# Generate a response with a system message
+response = llm.generate(
+    prompt="What is an Agentic Workflow?",
+    system_message="You are an expert on AI agent frameworks."
+)
+```
+> 📖 For full details on supported models, advanced generation, streaming, and output parsing, see the [LLM Module Guide](./docs/modules/llm.md).
+
+### Using Local LLMs with LiteLLM
+
+EvoAgentX supports local models through `LiteLLM`, allowing you to use providers like Ollama.
+
+**Example: Using a local Ollama model**
+1.  **Run the local model:** First, ensure your local model is running (e.g., with `ollama serve`).
+2.  **Configure in EvoAgentX:**
+
+```python
+from evoagentx.models.model_configs import LiteLLMConfig
+from evoagentx.models import LiteLLM
+
+# Configure for a local model
+config = LiteLLMConfig(
+    model="ollama/llama3",          # Model name recognized by LiteLLM
+    api_base="http://localhost:11434", # Local server address
+    is_local=True,                  # Flag for local model
+    output_response=True
+)
+
+# Initialize and use the model
+llm = LiteLLM(config)
 response = llm.generate(prompt="What is Agentic Workflow?")
 ```
-> 📖 More details on supported models and config options: [LLM module guide](./docs/modules/llm.md).
 
+## Core Concepts of EvoAgentX
 
-## Automatic WorkFlow Generation 
+EvoAgentX is built around a few core concepts that enable the creation of powerful and flexible agentic systems.
+
+### Agents: The Building Blocks
+The `Agent` is the fundamental component in EvoAgentX. It integrates a Large Language Model (LLM) with a set of `Actions` and `Memory` to perform tasks.
+
+### Actions: Defining Capabilities
+`Actions` define what an agent can do. Each action is a self-contained task that uses the LLM to reason, generate content, or use tools. An agent can have multiple actions, allowing it to perform a variety of tasks.
+
+### Workflows: Orchestrating Agents
+A `WorkFlow` connects multiple agents to achieve a complex goal. EvoAgentX can automatically generate a `WorkFlowGraph` from a natural language description of a goal.
+
+## Automatic WorkFlow Generation
 Once your API key and language model are configured, you can automatically generate and execute multi-agent workflows in EvoAgentX.
 
 🧩 Core Steps:
@@ -270,11 +320,11 @@ We apply EvoAgentX to optimize their prompts. The performance of the optimized a
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="./assets/open_deep_research_optimization_report.png" alt="Open Deep Research Optimization" width="100%"><br>
+      <img src="./assets/open_deep_research_optimization_report.png" alt="Open Deep Research Optimization" width="400"><br>
       <strong>Open Deep Research</strong>
     </td>
     <td align="center" width="50%">
-      <img src="./assets/owl_optimization_result.png" alt="OWL Optimization" width="100%"><br>
+      <img src="./assets/owl_optimization_result.png" alt="OWL Optimization" width="400"><br>
       <strong>OWL Agent</strong>
     </td>
   </tr>
@@ -292,8 +342,10 @@ Explore how to effectively use EvoAgentX with the following resources:
 | Cookbook | Description |
 |:---|:---|
 | **[Build Your First Agent](./docs/tutorial/first_agent.md)** | Quickly create and manage agents with multi-action capabilities. |
+| **[Customize Your Agent](./docs/tutorial/customize_agent.md)** | Use `CustomizeAgent` for rapid agent creation from simple descriptions. |
 | **[Build Your First Workflow](./docs/tutorial/first_workflow.md)** | Learn to build collaborative workflows with multiple agents. |
-| **[Working with Tools](./docs/tutorial/tools.md)** | Master EvoAgentX's powerful tool ecosystem for agent interactions |
+| **[Working with Action Graphs](./docs/tutorial/action_graph.md)** | Create complex, multi-step actions using `ActionGraph`. |
+| **[Working with Tools](./docs/tutorial/tools.md)** | Master EvoAgentX's powerful tool ecosystem for agent interactions. |
 | **[Automatic Workflow Generation](./docs/quickstart.md#automatic-workflow-generation-and-execution)** | Automatically generate workflows from natural language goals. |
 | **[Benchmark and Evaluation Tutorial](./docs/tutorial/benchmark_and_evaluation.md)** | Evaluate agent performance using benchmark datasets. |
 | **[TextGrad Optimizer Tutorial](./docs/tutorial/textgrad_optimizer.md)** | Automatically optimise the prompts within multi-agent workflow with TextGrad. |

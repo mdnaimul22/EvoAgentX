@@ -838,23 +838,23 @@ def run_arxiv_tool_example():
 
 def run_browser_use_tool_example():
     """Simple example using BrowserUseToolkit for browser automation."""
+    from utils.config import client_rotator
     print("\n===== BROWSER USE TOOL EXAMPLE =====\n")
-    
-    # Check for OpenAI API key
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        print("❌ OPENAI_API_KEY not found in environment variables")
-        print("Please set your OpenAI API key: export OPENAI_API_KEY='your-api-key-here'")
-        return
     
     try:
         # Initialize the BrowserUse toolkit
         print("Initializing BrowserUseToolkit...")
-        toolkit = BrowserUseToolkit(model="gpt-4o-mini", headless=False)
+        client_config = client_rotator.get_next_client_config()
+        toolkit = BrowserUseToolkit(
+            model=client_config.model,
+            api_key=client_config.api_key,
+            base_url=client_config.base_url,
+            proxy=client_config.proxy,
+            headless=False
+        )
         browser_tool = toolkit.get_tool("browser_use")
         
         print("✓ BrowserUseToolkit initialized")
-        print(f"✓ Using OpenAI API key: {openai_api_key[:8]}...")
         
         # Execute a simple browser task
         print("Executing browser task: 'Go to Google and search for OpenAI GPT-4'...")

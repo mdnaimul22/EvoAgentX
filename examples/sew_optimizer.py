@@ -7,11 +7,7 @@ from evoagentx.optimizers import SEWOptimizer
 from evoagentx.core.callbacks import suppress_logger_info
 
 
-# OPENAI_API_KEY = "OPENAI_API_KEY" 
-import os 
-from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from utils.config import client_rotator
 
 class HumanEvalSplits(HumanEval):
 
@@ -29,13 +25,23 @@ class HumanEvalSplits(HumanEval):
 
 def main():
     
-    llm_config = OpenAILLMConfig(model="gpt-4o-mini-2024-07-18", openai_key=OPENAI_API_KEY, top_p=0.85, temperature=0.2, frequency_penalty=0.0, presence_penalty=0.0)
+    client_config = client_rotator.get_next_client_config()
+    llm_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy,
+        top_p=0.85, 
+        temperature=0.2, 
+        frequency_penalty=0.0, 
+        presence_penalty=0.0
+    )
     llm = OpenAILLM(config=llm_config)
 
     # obtain SEW workflow 
     sew_graph = SEWWorkFlowGraph(llm_config=llm_config)
     agent_manager = AgentManager()
-    agent_manager.add_agents_from_workflow(sew_graph)
+    agent_manager.add_agents_from_workflow(sew_graph, llm_config=llm_config)
 
     # obtain HumanEval benchmark
     humaneval = HumanEvalSplits()

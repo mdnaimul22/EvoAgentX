@@ -3,13 +3,13 @@ import os
 from dotenv import load_dotenv
 from evoagentx.models import OpenAILLMConfig, OpenAILLM
 from evoagentx.hitl import HITLOutsideConversationAgent, HITLManager
+from utils.config import client_rotator
 # from evoagentx.workflow import WorkFlow, WorkFlowGraph
 # from evoagentx.workflow.workflow_graph import WorkFlowNode, WorkFlowEdge
 # from evoagentx.agents import AgentManager
 # from evoagentx.core.base_config import Parameter
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 async def main():
@@ -20,9 +20,12 @@ async def main():
     print("=" * 80)
     
     # configure the LLM
+    client_config = client_rotator.get_next_client_config()
     llm_config = OpenAILLMConfig(
-        model="gpt-4o", 
-        openai_key=OPENAI_API_KEY, 
+        model=client_config.model, 
+        openai_key=client_config.api_key, 
+        base_url=client_config.base_url,
+        proxy=client_config.proxy,
         stream=True, 
         output_response=True
     )

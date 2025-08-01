@@ -15,9 +15,9 @@ from evoagentx.hitl import (
     HITLManager
 )
 from evoagentx.models import OpenAILLMConfig, OpenAILLM 
+from utils.config import client_rotator
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class UserProfileInput(ActionInput):
     user_name: str = Field(description="User's name")
@@ -33,7 +33,15 @@ async def main():
     print("🚀 EvoAgentX HITL user input collection example")
     print("=" * 60)
 
-    llm_config = OpenAILLMConfig(model="gpt-4o", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+    client_config = client_rotator.get_next_client_config()
+    llm_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy,
+        stream=True, 
+        output_response=True
+    )
     llm = OpenAILLM(llm_config)
 
     # define user input fields

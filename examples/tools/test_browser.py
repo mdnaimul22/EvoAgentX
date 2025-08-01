@@ -1,6 +1,6 @@
 import os 
-from dotenv import load_dotenv
 from evoagentx.models import OpenAILLMConfig
+from utils.config import client_rotator
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
 from evoagentx.tools.browser_tool import BrowserToolkit
@@ -9,9 +9,15 @@ import http.server
 import socketserver
 import threading
 
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+client_config = client_rotator.get_next_client_config()
+openai_config = OpenAILLMConfig(
+    model=client_config.model,
+    openai_key=client_config.api_key,
+    base_url=client_config.base_url,
+    proxy=client_config.proxy,
+    stream=True, 
+    output_response=True
+)
 
 # Create a simple HTML page with console messages
 TEST_HTML = """

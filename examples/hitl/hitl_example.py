@@ -14,8 +14,7 @@ from evoagentx.hitl import (
     HITLManager
 )
 from evoagentx.models import OpenAILLMConfig, OpenAILLM 
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from utils.config import client_rotator
 
 class EmailSendActionInput(ActionInput):
     human_verified_data: str = Field(description="The extracted data that will be sent to the user")
@@ -79,7 +78,15 @@ async def main():
     print("🚀 EvoAgentX HITL example")
     print("=" * 60)
 
-    llm_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+    client_config = client_rotator.get_next_client_config()
+    llm_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy,
+        stream=True, 
+        output_response=True
+    )
     llm = OpenAILLM(llm_config)
 
     data_extraction_agent = CustomizeAgent(

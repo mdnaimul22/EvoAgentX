@@ -6,10 +6,18 @@ from evoagentx.models import OpenAILLMConfig
 from evoagentx.agents import CustomizeAgent
 from evoagentx.prompts import StringTemplate 
 from evoagentx.tools.mcp import MCPToolkit
+from utils.config import client_rotator
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY, stream=True, output_response=True)
+client_config = client_rotator.get_next_client_config()
+openai_config = OpenAILLMConfig(
+    model=client_config.model,
+    openai_key=client_config.api_key,
+    base_url=client_config.base_url,
+    proxy=client_config.proxy,
+    stream=True, 
+    output_response=True
+)
 
 def test_MCP_server():
     

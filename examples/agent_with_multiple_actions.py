@@ -7,6 +7,8 @@ from evoagentx.models import BaseLLM, OpenAILLMConfig
 from evoagentx.agents import Agent
 from evoagentx.core.module_utils import extract_code_blocks
 from evoagentx.actions import Action, ActionInput, ActionOutput
+from openai import OpenAI, DefaultHttpxClient
+from utils.config import client_rotator
 
 load_dotenv()
 
@@ -106,7 +108,15 @@ class TestCodeReview(Action):
 def main():
 
     # Initialize the LLM
-    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=os.getenv("OPENAI_API_KEY")) 
+    # The OpenAILLM will now automatically use the client_rotator if no API key is provided.
+    # We just need to create a config object.
+    client_config = client_rotator.get_next_client_config()
+    openai_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy
+    )
 
     # Define the agent 
     developer = Agent(

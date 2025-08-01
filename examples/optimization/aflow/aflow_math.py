@@ -5,10 +5,9 @@ from typing import Any, Callable
 from evoagentx.benchmark import MATH
 from evoagentx.optimizers import AFlowOptimizer
 from evoagentx.models import LiteLLMConfig, LiteLLM, OpenAILLMConfig, OpenAILLM 
-
+from utils.config import client_rotator
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 EXPERIMENTAL_CONFIG = {
@@ -63,7 +62,14 @@ def main():
 
     claude_config = LiteLLMConfig(model="anthropic/claude-3-5-sonnet-20240620", anthropic_key=ANTHROPIC_API_KEY)
     optimizer_llm = LiteLLM(config=claude_config)
-    openai_config = OpenAILLMConfig(model="gpt-4o-mini", openai_key=OPENAI_API_KEY)
+
+    client_config = client_rotator.get_next_client_config()
+    openai_config = OpenAILLMConfig(
+        model=client_config.model,
+        openai_key=client_config.api_key,
+        base_url=client_config.base_url,
+        proxy=client_config.proxy
+    )
     executor_llm = OpenAILLM(config=openai_config)
 
     # load benchmark
