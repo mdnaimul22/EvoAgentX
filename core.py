@@ -1,9 +1,42 @@
 import asyncio
 import json
+import os
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, List, Optional, Any, Tuple, Union, TextIO, BinaryIO
 from enum import Enum
 import numpy as np
+from hmac import compare_digest
+
+def secure_open(filepath: str, mode: str = 'w', is_binary: bool = False) -> Union[TextIO, BinaryIO]:
+    """
+    Securely open a file with restricted permissions (0o600).
+    
+    Args:
+        filepath (str): Path to the file
+        mode (str): File mode ('w' for write, 'r' for read, etc.)
+        is_binary (bool): Whether to open in binary mode
+        
+    Returns:
+        File object that should be used with a context manager
+    """
+    # Determine the os.open flags based on mode
+    flags = os.O_RDONLY
+    if 'w' in mode:
+        flags = os.O_WRONLY | os.O_CREAT
+    elif 'a' in mode:
+        flags = os.O_WRONLY | os.O_APPEND | os.O_CREAT
+        
+    # Add O_BINARY flag for Windows if needed
+    if hasattr(os, 'O_BINARY') and is_binary:
+        flags |= os.O_BINARY
+        
+    # Open with restricted permissions (0o600) - owner read/write only
+    fd = os.open(filepath, flags, 0o600)
+    
+    # Convert to Python file object
+    if is_binary:
+        mode += 'b'
+    return os.fdopen(fd, mode)
 
 from evoagentx.optimizers import (
     SEWOptimizer,
@@ -21,6 +54,55 @@ from evoagentx.benchmark import Benchmark
 from evoagentx.models import create_llm_instance
 
 from systemd import AgentProfile, AgentRole
+
+
+def enum_constant_time_compare(enum1, enum2) -> bool:
+    """
+    Constant-time comparison for enum values to prevent timing attacks.
+    While enum comparisons are not typically security-sensitive, this is implemented
+    as a security best practice.
+    
+    Args:
+        enum1: First enum value to compare
+        enum2: Second enum value to compare
+        
+    Returns:
+        bool: True if the enum values are equal
+        
+    Security Note:
+        This function uses constant-time comparison to prevent timing attacks.
+    """
+    return compare_digest(str(enum1).encode(), str(enum2).encode())
+
+
+def secure_dict_key_check(target_key: Union[str, bytes], dictionary: Dict) -> bool:
+    """
+    Perform a constant-time comparison of a key against dictionary keys.
+    
+    Args:
+        target_key: The key to check (str or bytes)
+        dictionary: The dictionary to check against
+    
+    Returns:
+        bool: True if the key exists in the dictionary
+        
+    Security Note:
+        This function uses constant-time comparison to prevent timing attacks.
+        All HMAC comparisons must use this function or hmac.compare_digest() directly.
+        Never use the 'in' operator or direct equality comparison for HMAC values.
+    """
+    if not dictionary:
+        return False
+        
+    # Ensure consistent type
+    if isinstance(target_key, str):
+        target_key = target_key.encode()
+    
+    # Convert dictionary keys if needed
+    dict_keys = [k.encode() if isinstance(k, str) else k for k in dictionary.keys()]
+    
+    # Perform constant-time comparison
+    return any(compare_digest(target_key, existing_key) for existing_key in dict_keys)
 
 
 class OptimizationStrategy(Enum):
@@ -155,7 +237,7 @@ class SimpleWorkflow:
         return f"Processed: {input_data}"
 '''
             
-            with open("./aflow_workflow/graph.py", "w") as f:
+            with secure_open("./aflow_workflow/graph.py", "w") as f:
                 f.write(graph_py_content)
             
             # Create a simple prompt.py file for AFlowOptimizer
@@ -163,7 +245,7 @@ class SimpleWorkflow:
 PROMPT = "Please process the following input: {input_data}"
 '''
             
-            with open("./aflow_workflow/prompt.py", "w") as f:
+            with secure_open("./aflow_workflow/prompt.py", "w") as f:
                 f.write(prompt_py_content)
             
             self.optimizers["aflow"] = AFlowOptimizer(
@@ -291,16 +373,21 @@ PROMPT = "Please process the following input: {input_data}"
     
     async def select_optimal_strategy(self, agent: AgentProfile, 
                                     target: OptimizationTarget) -> OptimizationStrategy:
-        
+        """
+        Select the optimal optimization strategy based on agent profile and target.
+        Uses constant-time comparisons as a security best practice.
+        """
         agent_analysis = await self.analyze_agent_for_optimization(agent)
         
-        if agent.role == AgentRole.META_LEARNING and target == OptimizationTarget.AGENT_PERFORMANCE:
+        if (enum_constant_time_compare(agent.role, AgentRole.META_LEARNING) and 
+            enum_constant_time_compare(target, OptimizationTarget.AGENT_PERFORMANCE)):
             return OptimizationStrategy.MIPRO
-        elif agent.role == AgentRole.CREATIVE_SYNTHESIS and target == OptimizationTarget.WORKFLOW_EFFICIENCY:
+        elif (enum_constant_time_compare(agent.role, AgentRole.CREATIVE_SYNTHESIS) and 
+              enum_constant_time_compare(target, OptimizationTarget.WORKFLOW_EFFICIENCY)):
             return OptimizationStrategy.AFLOW
-        elif target == OptimizationTarget.PROMPT_EFFECTIVENESS:
+        elif enum_constant_time_compare(target, OptimizationTarget.PROMPT_EFFECTIVENESS):
             return OptimizationStrategy.TEXTGRAD
-        elif target == OptimizationTarget.WORKFLOW_EFFICIENCY:
+        elif enum_constant_time_compare(target, OptimizationTarget.WORKFLOW_EFFICIENCY):
             return OptimizationStrategy.SEW
         else:
             return OptimizationStrategy.HYBRID
@@ -457,7 +544,7 @@ PROMPT = "Please process the following input: {input_data}"
             if isinstance(result, dict) and result.get("success"):
                 improvements = result.get("improvements", {})
                 for key, value in improvements.items():
-                    if key not in combined_improvements:
+                    if not secure_dict_key_check(key, combined_improvements):
                         combined_improvements[key] = []
                     combined_improvements[key].append(value)
         
@@ -702,7 +789,7 @@ PROMPT = "Please process the following input: {input_data}"
         self.logger.info("Shutting down advanced optimization system...")
         
         try:
-            with open("optimization_history.json", "w") as f:
+            with secure_open("optimization_history.json", 'w') as f:
                 json.dump(self.optimization_history, f, indent=2)
         except Exception as e:
             self.logger.error(f"Error saving optimization history: {e}")
